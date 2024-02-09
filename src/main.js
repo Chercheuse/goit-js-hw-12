@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loader.style.display = 'inline-block';
+    loadMoreBtn.style.display = 'block';
     gallery.innerHTML = '';
 
     try {
@@ -47,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error fetching data:', error);
     } finally {
       loader.style.display = 'none';
-      loadMoreBtn.style.display = 'block';
     }
   });
 
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
       handleResponse(data);
       smoothScroll();
       if (page * perPage >= data.totalHits) {
-        loadMoreBtn.style.display = 'none';
+        hideLoadMoreButton()
         showEndMessage();
       }
     } catch (error) {
@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function showEndMessage() {
+    loadMoreBtn.style.display = 'none';
     iziToast.error({
       title: '',
       backgroundColor: '#EF4040',
@@ -93,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleResponse(data) {
     if (data.hits.length === 0) {
+      loadMoreBtn.style.display = 'none';
       iziToast.error({
         title: '',
         backgroundColor: '#EF4040',
