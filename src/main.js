@@ -7,6 +7,10 @@ import axios from "axios";
 const form = document.querySelector('#form');
 const loader = document.querySelector('.loader');
 const gallery = document.querySelector('.gallery');
+const loadMoreBtn = document.querySelector('.load-btn');
+let page = 1;
+let perPage = 15;
+let userInput = '';
 
 const options = {
   captions: true,
@@ -20,12 +24,13 @@ const options = {
 };
 
 loader.style.display = 'none';
+loadMoreBtn.style.display = 'none';
 
 document.addEventListener('DOMContentLoaded', () => {
-  form.addEventListener('submit', event => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const userInput = document.getElementById('search').value.trim();
+    userInput = document.getElementById('search').value.trim();
 
     if (!userInput) {
       return;
@@ -34,26 +39,64 @@ document.addEventListener('DOMContentLoaded', () => {
     loader.style.display = 'inline-block';
     gallery.innerHTML = '';
 
-    fetch(
-      `https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true`
-    )
-      .then(response => response.json())
-      .then(data => handleResponse(data))
-      .catch(error => {
-        console.error('Error fetching data:', error);
-      })
-      .finally(() => {
-        loader.style.display = 'none';
-      });
+    try {
+      const response = await axios.get(`https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=15`);
+      const data = response.data;
+      handleResponse(data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      loader.style.display = 'none';
+      loadMoreBtn.style.display = 'block';
+    }
   });
+
+  loadMoreBtn.addEventListener('click', loadMoreImages);
+
+  async function loadMoreImages() {
+    page += 1;
+    loader.style.display = 'inline-block';
+  
+    try {
+      const response = await axios.get(`https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=${perPage}`);
+      const data = response.data;
+      handleResponse(data);
+      smoothScroll();
+      if (page * perPage >= data.totalHits) {
+        loadMoreBtn.style.display = 'none';
+        showEndMessage();
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      loader.style.display = 'none';
+    }
+  }
+  
+  function showEndMessage() {
+    iziToast.error({
+      title: '',
+      backgroundColor: '#EF4040',
+      message: "We're sorry, but you've reached the end of search results.",
+      position: 'topRight'
+    })
+  }
+
+  function smoothScroll() {
+    const galleryItemHeight = document.querySelector('.gallery-item').getBoundingClientRect().height;
+
+    window.scrollBy({
+      top: galleryItemHeight * 2,
+      behavior: 'smooth'
+    });
+  }
 
   function handleResponse(data) {
     if (data.hits.length === 0) {
       iziToast.error({
         title: '',
         backgroundColor: '#EF4040',
-        message:
-          'Sorry, there are no images matching your search query. Please try again!',
+        message: 'Sorry, there are no images matching your search query. Please try again!',
         position: 'topRight'
       });
     } else {
@@ -70,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </li>`;
         })
         .join('');
-      gallery.insertAdjacentHTML('afterbegin', markup);
+      gallery.insertAdjacentHTML('beforeend', markup);
       const lightbox = new SimpleLightbox('.gallery a', options);
       lightbox.refresh();
       form.reset();
