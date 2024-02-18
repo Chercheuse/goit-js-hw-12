@@ -2,15 +2,16 @@ import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
-import axios from "axios";
+import axios from 'axios';
 
 const form = document.querySelector('#form');
 const loader = document.querySelector('.loader');
 const gallery = document.querySelector('.gallery');
 const loadMoreBtn = document.querySelector('.load-btn');
-let page = 1;
+let page;
 let perPage = 15;
 let userInput = '';
+let lightbox;
 
 const options = {
   captions: true,
@@ -23,11 +24,8 @@ const options = {
   scaleImageToRatio: true,
 };
 
-loader.style.display = 'none';
-loadMoreBtn.style.display = 'none';
-
 document.addEventListener('DOMContentLoaded', () => {
-  form.addEventListener('submit', async (event) => {
+  form.addEventListener('submit', async event => {
     event.preventDefault();
 
     userInput = document.getElementById('search').value.trim();
@@ -36,18 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    loader.style.display = 'inline-block';
-    loadMoreBtn.style.display = 'block';
+    page = 1;
+
+    loader.classList.remove('hidden');
+    loadMoreBtn.classList.remove('hidden');
     gallery.innerHTML = '';
 
     try {
-      const response = await axios.get(`https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=15`);
+      const response = await axios.get(
+        `https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=15`
+      );
       const data = response.data;
       handleResponse(data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      loader.style.display = 'none';
+      loader.classList.add('hidden');
     }
   });
 
@@ -55,51 +57,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadMoreImages() {
     page += 1;
-    loader.style.display = 'inline-block';
-  
+    loader.classList.remove('hidden');
+
     try {
-      const response = await axios.get(`https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=${perPage}`);
+      const response = await axios.get(
+        `https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=${perPage}`
+      );
       const data = response.data;
+      lightbox.destroy();
       handleResponse(data);
       smoothScroll();
       if (page * perPage >= data.totalHits) {
-        hideLoadMoreButton()
+        loadMoreBtn.classList.add('hidden');
         showEndMessage();
       }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      loader.style.display = 'none';
+      loader.classList.add('hidden');
     }
   }
-  
+
   function showEndMessage() {
-    loadMoreBtn.style.display = 'none';
+    loadMoreBtn.classList.add('hidden');
     iziToast.error({
       title: '',
       backgroundColor: '#EF4040',
       message: "We're sorry, but you've reached the end of search results.",
-      position: 'topRight'
-    })
+      position: 'topRight',
+    });
   }
 
   function smoothScroll() {
-    const galleryItemHeight = document.querySelector('.gallery-item').getBoundingClientRect().height;
+    const galleryItemHeight = document
+      .querySelector('.gallery-item')
+      .getBoundingClientRect().height;
 
     window.scrollBy({
       top: galleryItemHeight * 2,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   }
 
   function handleResponse(data) {
     if (data.hits.length === 0) {
-      loadMoreBtn.style.display = 'none';
+      loadMoreBtn.classList.add('hidden');
       iziToast.error({
         title: '',
         backgroundColor: '#EF4040',
-        message: 'Sorry, there are no images matching your search query. Please try again!',
-        position: 'topRight'
+        message:
+          'Sorry, there are no images matching your search query. Please try again!',
+        position: 'topRight',
       });
     } else {
       const markup = data.hits
@@ -116,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .join('');
       gallery.insertAdjacentHTML('beforeend', markup);
-      const lightbox = new SimpleLightbox('.gallery a', options);
+      lightbox = new SimpleLightbox('.gallery a', options);
       lightbox.refresh();
       form.reset();
     }
