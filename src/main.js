@@ -3,6 +3,8 @@ import 'izitoast/dist/css/iziToast.min.css';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import axios from 'axios';
+import { fetchData } from './js/pixabay-api.js';
+import { createGalleryMarkup } from './js/render-functions.js';
 
 const form = document.querySelector('#form');
 const loader = document.querySelector('.loader');
@@ -30,8 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     userInput = document.getElementById('search').value.trim();
 
-    if (!userInput) {
-      return;
+    if (!userInput || userInput === ' ') {
+      return throwError("The search field should not be empty");
     }
 
     page = 1;
@@ -41,11 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
     gallery.innerHTML = '';
 
     try {
-      const response = await axios.get(
-        `https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=15`
-      );
-      const data = response.data;
-      handleResponse(data);
+      const data = await fetchData(userInput, page, perPage);
+      const markup = createGalleryMarkup(data);
+      gallery.insertAdjacentHTML('beforeend', markup);
+      lightbox = new SimpleLightbox('.gallery a', options);
+      lightbox.refresh();
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -60,15 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
     loader.classList.remove('hidden');
 
     try {
-      const response = await axios.get(
-        `https://pixabay.com/api/?key=42026920-e619b387ca2127f1aff40b8e2&q=${userInput}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=${perPage}`
-      );
-      const data = response.data;
+      const data = await fetchData(userInput, page, perPage);
+      const markup = createGalleryMarkup(data);
       lightbox.destroy();
-      handleResponse(data);
+      gallery.insertAdjacentHTML('beforeend', markup);
+      lightbox = new SimpleLightbox('.gallery a', options);
+      lightbox.refresh();
       smoothScroll();
       if (page * perPage >= data.totalHits) {
-        loadMoreBtn.classList.add('hidden');
         showEndMessage();
       }
     } catch (error) {
@@ -80,12 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showEndMessage() {
     loadMoreBtn.classList.add('hidden');
-    iziToast.error({
-      title: '',
-      backgroundColor: '#EF4040',
-      message: "We're sorry, but you've reached the end of search results.",
-      position: 'topRight',
-    });
+    throwError("We're sorry, but you've reached the end of search results.")
   }
 
   function smoothScroll() {
@@ -99,34 +95,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function handleResponse(data) {
-    if (data.hits.length === 0) {
-      loadMoreBtn.classList.add('hidden');
-      iziToast.error({
-        title: '',
-        backgroundColor: '#EF4040',
-        message:
-          'Sorry, there are no images matching your search query. Please try again!',
-        position: 'topRight',
-      });
-    } else {
-      const markup = data.hits
-        .map(data => {
-          return `<li class="gallery-item"><a href="${data.webformatURL}">
-          <img class="gallery-image" src="${data.webformatURL}" alt="${data.tags}"></a>
-          <div class='comments'>
-          <p><b>Likes: </b>${data.likes}</p>
-          <p><b>Views: </b>${data.views}</p>
-          <p><b>Comments: </b>${data.comments}</p>
-          <p><b>Downloads: </b>${data.downloads}</p>
-          </div>
-          </li>`;
-        })
-        .join('');
-      gallery.insertAdjacentHTML('beforeend', markup);
-      lightbox = new SimpleLightbox('.gallery a', options);
-      lightbox.refresh();
-      form.reset();
-    }
+  function throwError(message) {
+    iziToast.error({
+      title: '',
+      backgroundColor: '#EF4040',
+      message: message,
+      position: 'topRight',
+    });
   }
 });
