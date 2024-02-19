@@ -2,7 +2,6 @@ import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
-import axios from 'axios';
 import { fetchData } from './js/pixabay-api.js';
 import { createGalleryMarkup } from './js/render-functions.js';
 
@@ -26,6 +25,7 @@ const options = {
   scaleImageToRatio: true,
 };
 
+
 document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', async event => {
     event.preventDefault();
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userInput = document.getElementById('search').value.trim();
 
     if (!userInput || userInput === ' ') {
-      return throwError("The search field should not be empty");
+      return throwError('The search field should not be empty');
     }
 
     page = 1;
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const data = await fetchData(userInput, page, perPage);
+      handleData(data);
       const markup = createGalleryMarkup(data);
       gallery.insertAdjacentHTML('beforeend', markup);
       lightbox = new SimpleLightbox('.gallery a', options);
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error fetching data:', error);
     } finally {
       loader.classList.add('hidden');
+
     }
   });
 
@@ -63,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const data = await fetchData(userInput, page, perPage);
+      handleData(data);
       const markup = createGalleryMarkup(data);
       lightbox.destroy();
       gallery.insertAdjacentHTML('beforeend', markup);
@@ -81,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showEndMessage() {
     loadMoreBtn.classList.add('hidden');
-    throwError("We're sorry, but you've reached the end of search results.")
+    throwError("We're sorry, but you've reached the end of search results.");
   }
 
   function smoothScroll() {
@@ -103,4 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
       position: 'topRight',
     });
   }
+
+  function handleData(data) {
+    if (data.hits.length === 0) {
+      loadMoreBtn.classList.add('hidden');
+      iziToast.error({
+        title: '',
+        backgroundColor: '#EF4040',
+        message: 'Sorry, there are no images matching your search query. Please try again!',
+        position: 'topRight',
+      });
+  }
+}
 });
